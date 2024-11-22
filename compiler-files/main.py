@@ -1,12 +1,11 @@
 from lexer import LexicalAnalyzer 
 from syntax import Parser, print_ast_readable
+from generator import CodeGenerator
 
 def main():
-    code = """def func():
-        print(10 + 20)
-        if x > 5:
-            x = x - 1
-    """
+    file_path = '../test-files/basicTestOne.txt'  # Replace with your file path
+    with open(file_path, 'r') as file:
+        code = file.read()
 
     # Instantiate the lexical analyzer
     analyzer = LexicalAnalyzer()
@@ -29,6 +28,10 @@ def main():
 
 # Call the function to pretty-print the AST
     print_ast_readable(ast)
+    generator = CodeGenerator()
+    
+    assembly_code = generator.generate_code(ast)
+    print(assembly_code)
 
 if __name__ == "__main__":
     main()

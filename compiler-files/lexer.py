@@ -58,38 +58,12 @@ class LexicalAnalyzer:
         self.token_regex = '|'.join(f'(?P<{name}>{pattern})' for name, pattern in self.token_rules)
     
     def tokenize(self, code):
-    
         tokens = []
-        indent_levels = [0]
-        line_start = True
 
-        # The regex 'finditer' function essentially finds a substring from our token_list and then turns them as an "iterator". This means we get a special object that gives us the group name and matched test in a "one at a time" fashion.
-        for token in re.finditer(self.token_regex, code): 
-            token_type = token.lastgroup  # The name of group that matched 
-            token_value = token.group()  # The actual text matched
-            if token_type == 'WHITESPACE' and line_start:
-                # Handle indentation (count spaces/tabs at the start of lines)
-                current_indent = len(token_value)
-                if current_indent > indent_levels[-1]:
-                    indent_levels.append(current_indent)
-                    tokens.append(('INDENT', token_value))
-                while current_indent < indent_levels[-1]:
-                    indent_levels.pop()
-                    tokens.append(('DEDENT', ''))
+        for token in re.finditer(self.token_regex, code):
+            token_type = token.lastgroup
+            token_value = token.group()
 
-            elif token_type == 'NEWLINE':
-                tokens.append(('NEWLINE', token_value))
-                line_start = True
+            tokens.append((token_type, token_value))
 
-            elif token_type not in {'WHITESPACE', 'COMMENT', 'MULTILINE_COMMENT'}:
-                tokens.append((token_type, token_value))
-                line_start = False
-
-        # Add DEDENT tokens for remaining indentation levels
-        while len(indent_levels) > 1:
-            indent_levels.pop()
-            tokens.append(('DEDENT', ''))
         return tokens
-        
-        
-
