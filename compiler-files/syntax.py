@@ -14,6 +14,11 @@ class FunctionDefNode:
 
     def __repr__(self):
         return f"FunctionDefNode(name={repr(self.name)}, parameters={repr(self.parameters)}, body={repr(self.body)})"
+    
+"""class FunctionCallNode:
+    def __init__(self, ):
+        
+    def"""
 
 
 class PrintNode:
@@ -68,7 +73,13 @@ class NumberNode:
 
     def __repr__(self):
         return f"NumberNode(value={repr(self.value)})"
+    
+class FloatNode:
+    def __init__(self, value):
+        self.value = value
 
+    def __repr__(self):
+        return f"FloatNode(value={repr(self.value)})"
 
 class IdentifierNode:
     def __init__(self, name):
@@ -106,17 +117,21 @@ class Parser:
 
         while self.current_token() is not None:
             print(f"DEBUG: Parsing function at token: {self.current_token()}")
-            functions.append(self.parse_function_def())
+            is_main = False
+
+            if self.current_token()[1] == 'main': # Add additional logic to handle if the function name is main
+                is_main = True
+            functions.append(self.parse_function_def(is_main)) # Included parameter for is_main
             self.skip_ignorable_tokens()
 
         print(f"DEBUG: Final AST: {functions}")
         return functions
 
-    def parse_function_def(self):
+    def parse_function_def(self, main = False): # Add parameter to check if function is 'main' or not
         self.eat('DEF')
-        func_name = self.current_token()[1]
+        func_name = 'main' if main else self.current_token()[1]
         print(f"DEBUG: Function name: {func_name}")
-        self.eat('IDENTIFIER')
+        self.eat('MAIN' if main else 'IDENTIFIER') # Eat main if main
         self.eat('LPAREN')
         parameters = self.parse_parameters()
         self.eat('RPAREN')
@@ -125,6 +140,14 @@ class Parser:
         node = FunctionDefNode(func_name, parameters, body)
         print(f"DEBUG: FunctionDefNode created: {node}")
         return node
+    
+    """def parse_function_call(self):
+        self.eat('IDENTIFIER')
+        self.eat('LPAREN')
+        parameters = self.parse_parameters()
+        self.eat('RPAREN')
+        node = 
+        return node"""
 
     def parse_parameters(self):
         params = []
@@ -135,6 +158,33 @@ class Parser:
                 self.eat('COMMA')
         print(f"DEBUG: Parsed parameters: {params}")
         return params
+    
+    def parse_parameter(self):
+        if self.current_token()[0] == 'IDENTIFIER':
+            token = self.current_token()
+            self.eat('IDENTIFIER')
+            node = IdentifierNode(token[1])
+            print(f"DEBUG: IdentifierNode created: {node}")
+            return node
+        
+        if self.current_token()[0] == 'NUMBER':
+            token = self.current_token()
+            self.eat('NUMBER')
+            node = NumberNode(token[1])
+            print(f"DEBUG: NumberNode created: {node}")
+            return node
+
+        if self.current_token()[0] == '':
+            token = self.current_token()
+            self.eat('NUMBER')
+            expression = self.parse_expression()
+            print(f"DEBUG: Parsed parenthesized expression: {expression}")
+            return expression
+        
+
+        
+        else:
+            raise SyntaxError("Expected PARAMETER but found " + str(self.current_token()))
 
     def parse_block(self):
         statements = []
@@ -174,19 +224,34 @@ class Parser:
         return node
 
     def parse_if(self):
+        if self.current_token()[0] != 'IF':
+            raise SyntaxError(f"Expected 'IF' but found {self.current_token()}")
+        
         self.eat('IF')
+        
         condition = self.parse_expression()
         print(f"DEBUG: If condition: {condition}")
+        
+        if self.current_token()[0] != 'COLON':
+            raise SyntaxError("Expected ':' after if condition")
         self.eat('COLON')
+        
         block = self.parse_block()
+
         else_block = None
         if self.current_token() and self.current_token()[0] == 'ELSE':
             self.eat('ELSE')
+            
+            if self.current_token()[0] != 'COLON':
+                raise SyntaxError("Expected ':' after else")
+            
             self.eat('COLON')
             else_block = self.parse_block()
+
         node = IfNode(condition, block, else_block)
         print(f"DEBUG: IfNode created: {node}")
         return node
+
 
     def parse_assignment(self):
         identifier = self.current_token()[1]
@@ -238,6 +303,35 @@ class Parser:
         else:
             raise SyntaxError(f"Unexpected token: {token_value}")
         
+    
+    def parse_element(self):
+        if self.current_token()[0] == 'IDENTIFIER':
+            token = self.current_token()
+            self.eat('IDENTIFIER')
+            node = IdentifierNode(token[1])
+            print(f"DEBUG: IdentifierNode created: {node}")
+            return node
+        
+        if self.current_token()[0] == 'NUMBER':
+            token = self.current_token()
+            self.eat('NUMBER')
+            node = NumberNode(token[1])
+            print(f"DEBUG: NumberNode created: {node}")
+            return node
+        
+        if self.current_token()[0] == 'FLOAT':
+            token = self.current_token()
+            self.eat('FLOAT')
+            node = FloatNode(token[1])
+            print(f"DEBUG: FloatNode created: {node}")
+            return node
+        
+        else:
+            raise SyntaxError("Expected ELEMENT but found " + str(self.current_token()))
+        
+
+
+### ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 def print_ast_readable(functions, indent=0):
     for function in functions:

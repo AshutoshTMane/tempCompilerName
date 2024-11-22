@@ -14,6 +14,8 @@ class LexicalAnalyzer:
             ('NONE', r'\bNone\b'),
             ('TRUE', r'\bTrue\b'),
             ('FALSE', r'\bFalse\b'),
+            ('IN', r'\bin\b'),
+            ('RANGE', r'\brange\b'),
 
             # Comments
             ('COMMENT', r'#.*'),  # Single-line comment
@@ -21,6 +23,7 @@ class LexicalAnalyzer:
 
             # Strings
             ('STRING', r'(\'[^\']*\'|\"[^\"]*\")'),
+            ('COMMA', r'\,'),
 
             # Arithmetic operators
             ('PLUS', r'\+'),
