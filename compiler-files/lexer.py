@@ -7,6 +7,7 @@ class LexicalAnalyzer:
             ('DEF', r'\bdef\b'),
             ('MAIN', r'\bmain\b'),
             ('IF', r'\bif\b'),
+            ('FOR', r'\bfor\b'),
             ('ELSE', r'\belse\b'),
             ('WHILE', r'\bwhile\b'),
             ('PRINT', r'\bprint\b'),
