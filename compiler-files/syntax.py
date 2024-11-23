@@ -195,8 +195,9 @@ class Parser:
             if self.current_token() and self.current_token()[0] != 'DEDENT':
                 print(f"DEBUG: Parsing statement at token: {self.current_token()}")
                 statements.append(self.parse_statement())
-
-        self.eat('DEDENT')  # Consume the DEDENT token
+                
+        if self.current_token() != None:
+            self.eat('DEDENT')  # Consume the DEDENT token
         print(f"DEBUG: Parsed block: {statements}")
         return statements
 
@@ -211,6 +212,8 @@ class Parser:
             return self.parse_while()
         elif token_type == 'IDENTIFIER':
             return self.parse_assignment()
+        elif token_type == 'INDENT':
+            self.eat('INDENT')
         else:
             raise SyntaxError(f"Unexpected token: {token_type}")
 
