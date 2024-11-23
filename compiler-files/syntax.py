@@ -283,25 +283,14 @@ class Parser:
         return left
 
     def parse_factor(self):
-        token_type, token_value = self.current_token()
-        if token_type == 'NUMBER':
-            self.eat('NUMBER')
-            node = NumberNode(token_value)
-            print(f"DEBUG: NumberNode created: {node}")
-            return node
-        elif token_type == 'IDENTIFIER':
-            self.eat('IDENTIFIER')
-            node = IdentifierNode(token_value)
-            print(f"DEBUG: IdentifierNode created: {node}")
-            return node
-        elif token_type == 'LPAREN':
-            self.eat('LPAREN')
-            expression = self.parse_expression()
-            self.eat('RPAREN')
-            print(f"DEBUG: Parsed parenthesized expression: {expression}")
-            return expression
-        else:
-            raise SyntaxError(f"Unexpected token: {token_value}")
+        left = self.parse_element()
+        while self.current_token() and self.current_token()[0] in {'EXP'}:
+            operator = self.current_token()[1]
+            self.eat(self.current_token()[0])
+            right = self.parse_factor()
+            left = BinaryOpNode(left, operator, right)
+            print(f"DEBUG: BinaryOpNode created: {left}")
+        return left
         
     
     def parse_element(self):
