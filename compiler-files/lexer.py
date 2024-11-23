@@ -56,6 +56,7 @@ class LexicalAnalyzer:
             ('FLOAT', r'\d+\.\d+'),    
                 
             # Whitespace (skip these characters)
+            ('INDENT', r'    '),
             ('NEWLINE', r'\n'),
             ('WHITESPACE', r'\s+'),
         ]
