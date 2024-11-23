@@ -211,6 +211,8 @@ class Parser:
             return self.parse_while()
         elif token_type == 'IDENTIFIER':
             return self.parse_assignment()
+        elif token_type == 'INDENT':
+            self.eat('INDENT')
         else:
             raise SyntaxError(f"Unexpected token: {token_type}")
 
