@@ -16,6 +16,7 @@ class LexicalAnalyzer:
             ('FALSE', r'\bFalse\b'),
             ('IN', r'\bin\b'),
             ('RANGE', r'\brange\b'),
+            ('LEN', r'\blen\b'),
 
             # Comments
             ('COMMENT', r'#.*'),  # Single-line comment
@@ -55,6 +56,7 @@ class LexicalAnalyzer:
             ('FLOAT', r'\d+\.\d+'),    
                 
             # Whitespace (skip these characters)
+
             ('INDENT', r'   '),
             ('NEWLINE', r'\n'),
             ('WHITESPACE', r'\s+'),
