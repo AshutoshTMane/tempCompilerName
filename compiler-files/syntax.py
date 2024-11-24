@@ -196,12 +196,15 @@ class Parser:
                 print(f"DEBUG: Parsing statement at token: {self.current_token()}")
                 statements.append(self.parse_statement())
 
-        self.eat('DEDENT')  # Consume the DEDENT token
+        if self.current_token() != None:
+            self.eat('DEDENT')  # Consume the DEDENT token
         print(f"DEBUG: Parsed block: {statements}")
         return statements
 
     def parse_statement(self):
         token_type = self.current_token()[0]
+        print("Hi")
+        print(token_type)
         print(f"DEBUG: Parsing statement of type: {token_type}")
         if token_type == 'PRINT':
             return self.parse_print()
@@ -211,6 +214,8 @@ class Parser:
             return self.parse_while()
         elif token_type == 'IDENTIFIER':
             return self.parse_assignment()
+        elif token_type == 'INDENT':
+            self.eat('INDENT')
         else:
             raise SyntaxError(f"Unexpected token: {token_type}")
 
@@ -283,7 +288,7 @@ class Parser:
         return left
 
     def parse_factor(self):
-        token_type, token_value = self.current_token()
+        token_type, token_value, line_number = self.current_token()
         if token_type == 'NUMBER':
             self.eat('NUMBER')
             node = NumberNode(token_value)

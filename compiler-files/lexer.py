@@ -55,6 +55,7 @@ class LexicalAnalyzer:
             ('FLOAT', r'\d+\.\d+'),    
                 
             # Whitespace (skip these characters)
+            ('INDENT', r'   '),
             ('NEWLINE', r'\n'),
             ('WHITESPACE', r'\s+'),
         ]
@@ -63,11 +64,18 @@ class LexicalAnalyzer:
     
     def tokenize(self, code):
         tokens = []
+        line_number = 1
 
         for token in re.finditer(self.token_regex, code):
             token_type = token.lastgroup
             token_value = token.group()
 
-            tokens.append((token_type, token_value))
+            if token_type in {'WHITESPACE'}:
+                continue
+            
+            if token_type in {'NEWLINE'}:
+                line_number += 1
+
+            tokens.append((token_type, token_value, line_number))
 
         return tokens

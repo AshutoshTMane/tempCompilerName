@@ -1,5 +1,5 @@
 from syntax import *
 
 class CodeGenerator:
-    def generate():
+    def generate_code():
         print("hi")
