@@ -7,10 +7,13 @@ class CodeGenerator:
         assembly_code = []
         
         for function in ast:
-            code += self.generate_function(function)
+            self.generate_function(function, assembly_code)
 
         return assembly_code
     
-    def generate_function(self, function):
+    def generate_function(self, function, assembly_code):
+        assembly_code.append("{function.name}:")
         for statement in function.body:
-            code += self.generate_statement(statement)
+            self.generate_statement(statement, assembly_code)
+        assembly_code.append("RET")
+
