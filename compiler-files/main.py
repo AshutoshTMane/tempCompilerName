@@ -30,8 +30,8 @@ def main():
     print_ast_readable(ast)
     generator = CodeGenerator()
     
-    assembly_code = generator.generate_code(ast)
-    print(assembly_code)
+    assembly_code = generator.generate_assembly(ast)
+    generator.print_assembly(assembly_code)
 
 if __name__ == "__main__":
     main()
