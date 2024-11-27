@@ -22,6 +22,7 @@ def main():
     
     # Parse the tokens to create an AST
     ast = parser.parse()
+    print(ast)
 
     # Print the AST
 

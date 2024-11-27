@@ -4,11 +4,21 @@ class ProgramNode:
         self.statements = statements  # List of top-level statements
 
     def __repr__(self):
-        return (f"ProgramNode("
-                f"functions={repr(self.functions)}, "
-                f"statements={repr(self.statements)})")
-
-
+        # Start with a header
+        output = ["AST:"]
+        
+        # Create an index to track the order of appearance
+        index = 0
+        
+        # Iterate over both functions and statements
+        for node in self.functions + self.statements:
+            if isinstance(node, FunctionDefNode):
+                output.append(f"[{index}] {repr(node)}")
+            else:
+                output.append(f"[{index}] {repr(node)}")
+            index += 1
+        
+        return "\n".join(output)
 
 class FunctionDefNode:
     def __init__(self, name, parameters, body):
@@ -203,7 +213,7 @@ class Parser:
             
         self.skip_ignorable_tokens()
         print()
-        print(f"DEBUG: Final AST: {functions}")
+        #print(f"DEBUG: Final AST: {functions}")
         return ProgramNode(functions, statements)
 
     def parse_function_def(self, main = False): # Add parameter to check if function is 'main' or not
