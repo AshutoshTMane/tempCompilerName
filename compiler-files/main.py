@@ -1,5 +1,5 @@
 from lexer import LexicalAnalyzer 
-from syntax import Parser, print_ast_readable
+from syntax import Parser
 from generator import CodeGenerator
 
 def main():
@@ -24,14 +24,13 @@ def main():
     ast = parser.parse()
 
     # Print the AST
-    print("\nAST:")
 
 # Call the function to pretty-print the AST
-    print_ast_readable(ast)
-    generator = CodeGenerator()
+    #print_ast_readable(ast)
+    #generator = CodeGenerator()
     
-    assembly_code = generator.generate_assembly(ast)
-    generator.print_assembly(assembly_code)
+    #assembly_code = generator.generate_assembly(ast)
+    #generator.print_assembly(assembly_code)
 
 if __name__ == "__main__":
     main()

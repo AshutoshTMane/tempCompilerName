@@ -1,9 +1,13 @@
 class ProgramNode:
-    def __init__(self, functions):
-        self.functions = functions
+    def __init__(self, functions, statements):
+        self.functions = functions  # List of function definitions
+        self.statements = statements  # List of top-level statements
 
     def __repr__(self):
-        return f"ProgramNode(functions={repr(self.functions)})"
+        return (f"ProgramNode("
+                f"functions={repr(self.functions)}, "
+                f"statements={repr(self.statements)})")
+
 
 
 class FunctionDefNode:
@@ -15,18 +19,27 @@ class FunctionDefNode:
     def __repr__(self):
         return f"FunctionDefNode(name={repr(self.name)}, parameters={repr(self.parameters)}, body={repr(self.body)})"
     
-"""class FunctionCallNode:
-    def __init__(self, ):
-        
-    def"""
+class ReturnNode:
+    def __init__(self, value=None):
+        self.value = value 
+
+    def __repr__(self):
+        return f"ReturnNode(value={self.value})"
+
+class FunctionCallNode:
+    def __init__(self, function_name, arguments):
+        self.function_name = function_name
+        self.arguments = arguments
+    def __repr__(self):
+        return f"FunctionCallNode(function_name={self.function_name}, arguments={self.arguments})"
 
 
 class PrintNode:
-    def __init__(self, expression):
-        self.expression = expression
+    def __init__(self, parameters):
+        self.parameters = parameters
 
     def __repr__(self):
-        return f"PrintNode(expression={repr(self.expression)})"
+        return f"PrintNode(expression={repr(self.parameters)})"
 
 
 class AssignmentNode:
@@ -36,16 +49,54 @@ class AssignmentNode:
 
     def __repr__(self):
         return f"AssignmentNode(identifier={repr(self.identifier)}, expression={repr(self.expression)})"
+    
+class AugmentedAssignmentNode:
+    def __init__(self, identifier, operator, expression):
+        self.identifier = identifier
+        self.operator = operator
+        self.expression = expression
+    
+    def __repr__(self):
+        return f"AssignmentNode(identifier={repr(self.identifier)}, operator={repr(self.operator)} expression={repr(self.expression)})"
+    
+class ListNode:
+    def __init__(self, elements):
+        self.elements = elements
+    
+    def __repr__(self):
+        return f"ListNode({self.elements})"
 
 
 class IfNode:
-    def __init__(self, condition, block, else_block=None):
+    def __init__(self, condition, block, elif_condition=None, elif_block=None, else_block=None):
         self.condition = condition
         self.block = block
+        self.elif_condition = elif_condition
+        self.elif_block = elif_block
         self.else_block = else_block
 
     def __repr__(self):
-        return f"IfNode(condition={repr(self.condition)}, block={repr(self.block)}, else_block={repr(self.else_block)})"
+        return (f"IfNode(condition={repr(self.condition)}, block={repr(self.block)}, "
+                f"elif_condition={repr(self.elif_condition)}, elif_block={repr(self.elif_block)}, "
+                f"else_block={repr(self.else_block)})")
+
+class ForNode:
+    def __init__(self, variable, collection, block):
+        self.variable = variable  
+        self.collection = collection 
+        self.block = block 
+
+    def __repr__(self):
+        return f"ForNode(variable={repr(self.variable)}, collection={repr(self.collection)}, block={repr(self.block)})"
+
+class RangeNode:
+    def __init__(self, start, stop, step):
+        self.start = start
+        self.stop = stop
+        self.step = step
+
+    def __repr__(self):
+        return f"RangeNode(start={self.start}, stop={self.stop}, step={self.step})"
 
 
 class WhileNode:
@@ -81,6 +132,29 @@ class FloatNode:
     def __repr__(self):
         return f"FloatNode(value={repr(self.value)})"
 
+class StringNode:
+    def __init__(self, value):
+        self.value = value 
+    
+    def __repr__(self):
+        return f"StringNode({self.value})"
+    
+class FStringNode:
+    def __init__(self, parts):
+        self.parts = parts  
+
+    def __repr__(self):
+        return f"FStringNode(parts={repr(self.parts)})"
+
+    
+class BooleanNode:
+    def __init__(self, value):
+        self.value = value  
+    
+    def __repr__(self):
+        return f"BooleanNode({self.value})"
+
+
 class IdentifierNode:
     def __init__(self, name):
         self.name = name
@@ -114,18 +188,23 @@ class Parser:
     def parse(self):
         self.skip_ignorable_tokens()
         functions = []
+        statements = []
 
         while self.current_token() is not None:
             print(f"DEBUG: Parsing function at token: {self.current_token()}")
-            is_main = False
-
-            if self.current_token()[1] == 'main': # Add additional logic to handle if the function name is main
-                is_main = True
-            functions.append(self.parse_function_def(is_main)) # Included parameter for is_main
+            print("hi")
             self.skip_ignorable_tokens()
-
+            print(self.current_token()[0])
+            if self.current_token()[0] == "DEF": 
+                is_main = self.current_token()[1] == "main"
+                functions.append(self.parse_function_def(is_main))
+            else:
+                statements.append(self.parse_statement())
+            
+        self.skip_ignorable_tokens()
+        print()
         print(f"DEBUG: Final AST: {functions}")
-        return functions
+        return ProgramNode(functions, statements)
 
     def parse_function_def(self, main = False): # Add parameter to check if function is 'main' or not
         self.eat('DEF')
@@ -136,18 +215,66 @@ class Parser:
         parameters = self.parse_parameters()
         self.eat('RPAREN')
         self.eat('COLON')
-        body = self.parse_block()
+        body = self.parse_block(in_function = True)
         node = FunctionDefNode(func_name, parameters, body)
         print(f"DEBUG: FunctionDefNode created: {node}")
         return node
     
-    """def parse_function_call(self):
-        self.eat('IDENTIFIER')
-        self.eat('LPAREN')
-        parameters = self.parse_parameters()
-        self.eat('RPAREN')
-        node = 
-        return node"""
+    def parse_function_call(self):
+        token = self.current_token()
+        if token[0] != 'IDENTIFIER':
+            raise SyntaxError(f"Expected function name, found {token}")
+
+        function_name = token[1]  # Save the function name
+        self.eat('IDENTIFIER')  # Consume the identifier
+
+        # Ensure the next token is an opening parenthesis
+        if self.current_token()[0] != 'LPAREN':
+            raise SyntaxError(f"Expected '(' after function name, found {self.current_token()}")
+
+        self.eat('LPAREN')  # Consume '('
+        arguments = []
+
+        # Parse arguments if present
+        if self.current_token()[0] != 'RPAREN':  # Not an empty argument list
+            while True:
+                arguments.append(self.parse_expression())  # Parse an argument expression
+                if self.current_token()[0] == 'COMMA':  # Handle comma-separated arguments
+                    self.eat('COMMA')
+                else:
+                    break
+
+        # Ensure the closing parenthesis is present
+        if self.current_token()[0] != 'RPAREN':
+            raise SyntaxError(f"Expected ')' after arguments, found {self.current_token()}")
+
+        self.eat('RPAREN')  # Consume ')'
+
+        # Create and return the function call node
+        node = FunctionCallNode(function_name=function_name, arguments=arguments)
+        print(f"DEBUG: FunctionCallNode created: {node}")
+        return node
+
+    
+    def parse_return(self):
+        # Ensure the current token is 'RETURN'
+        if self.current_token()[0] != 'RETURN':
+            raise SyntaxError("Expected 'RETURN'")
+
+        self.eat('RETURN')  # Consume the 'RETURN' token
+
+        if self.current_token() and self.current_token()[0] not in {'SEMICOLON', 'NEWLINE'}:
+            # Parse the expression being returned
+            return_value = self.parse_expression()
+        else:
+            # Handle `return;` with no value
+            return_value = None
+
+        # Create a ReturnNode
+        node = ReturnNode(value=return_value)
+        print(f"DEBUG: ReturnNode created: {node}")
+        return node
+
 
     def parse_parameters(self):
         params = []
@@ -160,56 +287,57 @@ class Parser:
         return params
     
     def parse_parameter(self):
-        if self.current_token()[0] == 'IDENTIFIER':
-            token = self.current_token()
-            self.eat('IDENTIFIER')
-            node = IdentifierNode(token[1])
-            print(f"DEBUG: IdentifierNode created: {node}")
-            return node
-        
-        if self.current_token()[0] == 'NUMBER':
-            token = self.current_token()
-            self.eat('NUMBER')
-            node = NumberNode(token[1])
-            print(f"DEBUG: NumberNode created: {node}")
-            return node
+        expression = self.parse_expression()
+        print(f"DEBUG: Parsed expression: {expression}")
+        return expression
+    
+        raise SyntaxError("Expected PARAMETER but found " + str(self.current_token()))
 
-        if self.current_token()[0] == '':
-            token = self.current_token()
-            self.eat('NUMBER')
-            expression = self.parse_expression()
-            print(f"DEBUG: Parsed parenthesized expression: {expression}")
-            return expression
-        
-
-        
-        else:
-            raise SyntaxError("Expected PARAMETER but found " + str(self.current_token()))
-
-    def parse_block(self):
+    def parse_block(self, in_function=False):
         statements = []
         self.eat('INDENT')  # Consume the INDENT token
+        print("in block")
 
         while self.current_token() and self.current_token()[0] != 'DEDENT':
             self.skip_ignorable_tokens()
-            if self.current_token() and self.current_token()[0] != 'DEDENT':
+
+            # Handle `RETURN` statement
+            if self.current_token() and self.current_token()[0] == 'RETURN':
+                if in_function:
+                    statements.append(self.parse_return())
+                else:
+                    raise SyntaxError("Return statement found outside of a function")
+
+            # Handle `ELIF` or `ELSE` tokens
+            elif self.current_token() and self.current_token()[0] in ['ELIF', 'ELSE']:
+                return statements
+
+            # Parse other statements
+            elif self.current_token() and self.current_token()[0] != 'DEDENT':
                 print(f"DEBUG: Parsing statement at token: {self.current_token()}")
                 statements.append(self.parse_statement())
 
-        if self.current_token() != None:
-            self.eat('DEDENT')  # Consume the DEDENT token
+        # Consume `DEDENT` token to close the block
+        if self.current_token() is not None:
+            self.eat('DEDENT')
+            print("Ate Dedent")
+
         print(f"DEBUG: Parsed block: {statements}")
+        print("out of block")
         return statements
 
+
     def parse_statement(self):
+        self.skip_ignorable_tokens()
         token_type = self.current_token()[0]
-        print("Hi")
-        print(token_type)
+
         print(f"DEBUG: Parsing statement of type: {token_type}")
         if token_type == 'PRINT':
             return self.parse_print()
         elif token_type == 'IF':
             return self.parse_if()
+        elif token_type == 'FOR':  
+            return self.parse_for()
         elif token_type == 'WHILE':
             return self.parse_while()
         elif token_type == 'IDENTIFIER':
@@ -218,53 +346,163 @@ class Parser:
             self.eat('INDENT')
         else:
             raise SyntaxError(f"Unexpected token: {token_type}")
+        
+        self.skip_ignorable_tokens()
 
     def parse_print(self):
         self.eat('PRINT')
         self.eat('LPAREN')
-        expression = self.parse_expression()
+
+        parameters = []
+
+        parameters.append(self.parse_parameter())
+
+        while self.current_token() and self.current_token()[0] == 'COMMA':
+            self.eat('COMMA')
+            parameters.append(self.parse_parameter())
+        
         self.eat('RPAREN')
-        node = PrintNode(expression)
+        node = PrintNode(parameters)
         print(f"DEBUG: PrintNode created: {node}")
         return node
 
+
     def parse_if(self):
-        if self.current_token()[0] != 'IF':
-            raise SyntaxError(f"Expected 'IF' but found {self.current_token()}")
+        if self.current_token()[0] not in {'IF', 'ELIF', 'ELSE'}:
+            raise SyntaxError(f"Expected 'IF', 'ELIF', or 'ELSE' but found {self.current_token()}")
         
-        self.eat('IF')
-        
+        if self.current_token()[0] == 'IF':
+            self.eat('IF')
+        elif self.current_token()[0] == 'ELIF':
+            self.eat('ELIF')
+
         condition = self.parse_expression()
-        print(f"DEBUG: If condition: {condition}")
-        
+        print(f"DEBUG: If/Elif condition: {condition}")
+
         if self.current_token()[0] != 'COLON':
-            raise SyntaxError("Expected ':' after if condition")
+            raise SyntaxError("Expected ':' after if/elif condition")
         self.eat('COLON')
-        
+
+        print("hi)")
         block = self.parse_block()
+        
 
         else_block = None
-        if self.current_token() and self.current_token()[0] == 'ELSE':
-            self.eat('ELSE')
-            
-            if self.current_token()[0] != 'COLON':
-                raise SyntaxError("Expected ':' after else")
-            
-            self.eat('COLON')
-            else_block = self.parse_block()
+        elif_condition = None
+        elif_block = None
 
-        node = IfNode(condition, block, else_block)
+        while self.current_token() and (self.current_token()[0] == 'ELIF' or self.current_token()[0] == 'ELSE'):
+            if self.current_token()[0] == 'ELIF':
+                self.eat('ELIF')
+                elif_condition = self.parse_expression()
+                print(f"DEBUG: Elif condition: {elif_condition}")
+
+                if self.current_token()[0] != 'COLON':
+                    raise SyntaxError("Expected ':' after elif condition")
+                self.eat('COLON')
+
+                elif_block = self.parse_block()
+            else: 
+                self.eat('ELSE')
+
+                if self.current_token()[0] != 'COLON':
+                    raise SyntaxError("Expected ':' after else")
+                self.eat('COLON')
+                else_block = self.parse_block()
+                break 
+
+        node = IfNode(condition, block, elif_condition, elif_block, else_block)
         print(f"DEBUG: IfNode created: {node}")
+        return node
+
+    def parse_for(self):
+        self.eat('FOR')  
+        variable = self.current_token()[1] 
+        self.eat('IDENTIFIER') 
+        self.eat('IN')  
+
+        if self.current_token()[0]  == 'RANGE': 
+            collection = self.parse_range()
+        else:   
+            collection = self.parse_expression()  
+        self.eat('COLON') 
+
+        block = self.parse_block()  
+
+        node = ForNode(variable, collection, block)
+        print(f"DEBUG: ForNode created: {node}")
+        return node
+
+    def parse_while(self):
+        self.eat('WHILE')
+        condition = self.parse_expression()
+
+        self.eat('COLON') 
+
+        block = self.parse_block()
+
+        node = WhileNode(condition, block)
+        print(f"DEBUG: WhileNode created: {node}")
+
+        return node
+
+    
+    def parse_range(self):
+        self.eat('RANGE')
+        self.eat('LPAREN') 
+
+        list_expr = self.parse_expression()  
+        
+        self.eat('RPAREN')  
+
+        node = ListNode(list_expr)  
+        print(f"DEBUG: ListNode created: {node}")
+        return node
+    
+    def parse_list(self):
+        self.eat('LBRACK') 
+        
+        elements = [] 
+        
+        while self.current_token()[0] != 'RBRACK': 
+            print(self.current_token())
+            element = self.parse_expression()  
+            elements.append(element) 
+            
+            if self.current_token()[0] == 'COMMA': 
+                self.eat('COMMA')
+            elif self.current_token()[0] != 'RBRACK':
+                raise SyntaxError(f"Unexpected token: {self.current_token()}")
+        
+        self.eat('RBRACK')  
+        
+
+        node = ListNode(elements)
+        print(f"DEBUG: ListNode created: {node}")
         return node
 
 
     def parse_assignment(self):
         identifier = self.current_token()[1]
         self.eat('IDENTIFIER')
-        self.eat('ASSIGN')
+
+        operator = None
+        if self.current_token()[0] in {'PLUS_ASSIGN', 'MINUS_ASSIGN', 'TIMES_ASSIGN', 'DIVIDE_ASSIGN'}:
+            operator = self.current_token()[0]
+            self.eat(operator)
+
+        if operator is None:
+            self.eat('ASSIGN')
+
         expression = self.parse_expression()
-        node = AssignmentNode(IdentifierNode(identifier), expression)
-        print(f"DEBUG: AssignmentNode created: {node}")
+
+        if operator:
+            node = AugmentedAssignmentNode(IdentifierNode(identifier), operator, expression)
+            print(f"DEBUG: AugmentedAssignmentNode created: {node}")
+        else:
+            node = AssignmentNode(IdentifierNode(identifier), expression)
+            print(f"DEBUG: AssignmentNode created: {node}")
+    
         return node
 
     def parse_expression(self):
@@ -288,56 +526,90 @@ class Parser:
         return left
 
     def parse_factor(self):
-        token_type, token_value, line_number = self.current_token()
-        if token_type == 'NUMBER':
-            self.eat('NUMBER')
-            node = NumberNode(token_value)
-            print(f"DEBUG: NumberNode created: {node}")
-            return node
-        elif token_type == 'IDENTIFIER':
-            self.eat('IDENTIFIER')
-            node = IdentifierNode(token_value)
-            print(f"DEBUG: IdentifierNode created: {node}")
-            return node
-        elif token_type == 'LPAREN':
-            self.eat('LPAREN')
-            expression = self.parse_expression()
-            self.eat('RPAREN')
-            print(f"DEBUG: Parsed parenthesized expression: {expression}")
-            return expression
-        else:
-            raise SyntaxError(f"Unexpected token: {token_value}")
-        
+        left = self.parse_element()
+        while self.current_token() and self.current_token()[0] in {'EXP'}:
+            operator = self.current_token()[1]
+            self.eat(self.current_token()[0])
+            right = self.parse_factor()
+            left = BinaryOpNode(left, operator, right)
+            print(f"DEBUG: BinaryOpNode created: {left}")
+        return left
     
     def parse_element(self):
         if self.current_token()[0] == 'IDENTIFIER':
             token = self.current_token()
-            self.eat('IDENTIFIER')
-            node = IdentifierNode(token[1])
-            print(f"DEBUG: IdentifierNode created: {node}")
-            return node
+            
+            # Check if the next token is LPAREN, indicating a function call
+            if self.peek_next_token() and self.peek_next_token()[0] == 'LPAREN':
+                return self.parse_function_call()
+            else:
+                # Plain identifier
+                self.eat('IDENTIFIER')
+                node = IdentifierNode(token[1])
+                print(f"DEBUG: IdentifierNode created: {node}")
+                return node
         
-        if self.current_token()[0] == 'NUMBER':
+        elif self.current_token()[0] == 'LBRACK':
+            print(f"DEBUG: Detected LBRACK, attempting to parse list at token: {self.current_token()}")
+            node = self.parse_list()
+            print(f"DEBUG: ListNode created: {node}")
+            return node
+
+        elif self.current_token()[0] == 'NUMBER':
             token = self.current_token()
             self.eat('NUMBER')
             node = NumberNode(token[1])
             print(f"DEBUG: NumberNode created: {node}")
             return node
-        
-        if self.current_token()[0] == 'FLOAT':
+
+        elif self.current_token()[0] == 'FLOAT':
             token = self.current_token()
             self.eat('FLOAT')
             node = FloatNode(token[1])
             print(f"DEBUG: FloatNode created: {node}")
             return node
-        
+
+        elif self.current_token()[0] == 'STRING': 
+            token = self.current_token()
+            self.eat('STRING')
+            node = StringNode(token[1])  
+            print(f"DEBUG: StringNode created: {node}")
+            return node
+
+        elif self.current_token()[0] == 'TRUE':  
+            token = self.current_token()
+            self.eat('TRUE')
+            node = BooleanNode(True) 
+            print(f"DEBUG: BooleanNode created: {node}")
+            return node
+
+        elif self.current_token()[0] == 'FALSE':  
+            token = self.current_token()
+            self.eat('FALSE')
+            node = BooleanNode(False)  
+            print(f"DEBUG: BooleanNode created: {node}")
+            return node
+
+        elif self.current_token()[0] == 'LPAREN':
+            self.eat('LPAREN')
+            node = self.parse_expression()  
+            self.eat('RPAREN') 
+            print(f"DEBUG: Parenthesized expression node: {node}")
+            return node
+
         else:
             raise SyntaxError("Expected ELEMENT but found " + str(self.current_token()))
-        
+
+    def peek_next_token(self):
+        if self.pos + 1 < len(self.tokens):
+            return self.tokens[self.pos + 1]
+        return None
+
+
 
 
 ### ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
+"""
 def print_ast_readable(functions, indent=0):
     for function in functions:
         print_function(function, indent)
@@ -384,3 +656,4 @@ def print_expression(expression, indent):
         print(f"{prefix}Number: {expression.value}")
     elif isinstance(expression, IdentifierNode):
         print(f"{prefix}Variable: {expression.name}")
+"""
