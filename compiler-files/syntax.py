@@ -427,7 +427,7 @@ class Parser:
 
     def parse_for(self):
         self.eat('FOR')  
-        variable = self.current_token()[1] 
+        variable = IdentifierNode(self.current_token()[1])
         self.eat('IDENTIFIER') 
         self.eat('IN')  
 

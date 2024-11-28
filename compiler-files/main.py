@@ -24,14 +24,10 @@ def main():
     ast = parser.parse()
     print(ast)
 
-    # Print the AST
-
-# Call the function to pretty-print the AST
-    #print_ast_readable(ast)
-    #generator = CodeGenerator()
+    generator = CodeGenerator()
     
-    #assembly_code = generator.generate_assembly(ast)
-    #generator.print_assembly(assembly_code)
+    assembly_code = generator.generate_assembly(ast)
+    generator.print_assembly()
 
 if __name__ == "__main__":
     main()
