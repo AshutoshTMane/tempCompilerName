@@ -237,12 +237,20 @@ class Parser:
 
     def parse_function_def(self, main = False): # Add parameter to check if function is 'main' or not
         self.eat('DEF')
+        if not main and self.current_token()[0] != 'IDENTIFIER':
+            self.add_error("Expected function name after 'def'")
         func_name = 'main' if main else self.current_token()[1]
         print(f"DEBUG: Function name: {func_name}")
         self.eat('MAIN' if main else 'IDENTIFIER') # Eat main if main
+        if self.current_token()[0] != 'LPAREN':
+            self.add_error("Expected '(' after function name")
         self.eat('LPAREN')
         parameters = self.parse_parameters()
+        if self.current_token()[0] != 'RPAREN':
+            self.add_error("Expected ')' after function parameters")
         self.eat('RPAREN')
+        if self.current_token()[0] != 'COLON':
+            self.add_error("Expected ':' after function declaration")
         self.eat('COLON')
         body = self.parse_block(in_function = True)
         node = FunctionDefNode(func_name, parameters, body)
@@ -310,8 +318,12 @@ class Parser:
         while self.current_token() and self.current_token()[0] == 'IDENTIFIER':
             params.append(self.current_token()[1])
             self.eat('IDENTIFIER')
+            if self.current_token()[0] not in ['COMMA', 'RPAREN']:
+                self.add_error("Expected ',' or ')' after parameter")
             if self.current_token() and self.current_token()[0] == 'COMMA':
                 self.eat('COMMA')
+                if self.current_token()[0] == 'RPAREN':
+                    self.add_error("Expected parameter after ','")
         print(f"DEBUG: Parsed parameters: {params}")
         return params
     
@@ -323,30 +335,30 @@ class Parser:
 
     def parse_block(self, in_function=False):
         statements = []
-        self.eat('INDENT')  # Consume the INDENT token
+        
+        self.eat('INDENT') 
         print("in block")
 
         while self.current_token() and self.current_token()[0] != 'DEDENT':
             self.skip_ignorable_tokens()
 
-            # Handle `RETURN` statement
             if self.current_token() and self.current_token()[0] == 'RETURN':
                 if in_function:
                     statements.append(self.parse_return())
                 else:
                     self.add_error("Return statement found outside of a function")
-
-            # Handle `ELIF` or `ELSE` tokens
+            elif self.current_token()[0] in ['ELIF', 'ELSE']:
+                self.add_error("Unexpected 'elif' or 'else' without matching 'if'")
             elif self.current_token() and self.current_token()[0] in ['ELIF', 'ELSE']:
                 return statements
 
-            # Parse other statements
             elif self.current_token() and self.current_token()[0] != 'DEDENT':
                 print(f"DEBUG: Parsing statement at token: {self.current_token()}")
                 statements.append(self.parse_statement())
 
-        # Consume `DEDENT` token to close the block
-        if self.current_token() is not None:
+        if self.current_token() is None:
+            self.add_error("Unexpected end of input in block")
+        else:
             self.eat('DEDENT')
             print("Ate Dedent")
 
@@ -444,15 +456,21 @@ class Parser:
         return node
 
     def parse_for(self):
-        self.eat('FOR')  
+        self.eat('FOR')
+        if self.current_token()[0] != 'IDENTIFIER':
+            self.add_error("Expected identifier after 'for'")  
         variable = IdentifierNode(self.current_token()[1])
-        self.eat('IDENTIFIER') 
+        self.eat('IDENTIFIER')
+        if self.current_token()[0] != 'IN':
+            self.add_error("Expected 'in' in for loop") 
         self.eat('IN')  
 
         if self.current_token()[0]  == 'RANGE': 
             collection = self.parse_range()
         else:   
             collection = self.parse_expression()  
+        if self.current_token()[0] != 'COLON':
+            self.add_error("Expected ':' after for loop condition")
         self.eat('COLON') 
 
         block = self.parse_block()  
@@ -464,7 +482,9 @@ class Parser:
     def parse_while(self):
         self.eat('WHILE')
         condition = self.parse_expression()
-
+        
+        if self.current_token()[0] != 'COLON':
+            self.add_error("Expected ':' after while condition")
         self.eat('COLON') 
 
         block = self.parse_block()
@@ -513,6 +533,9 @@ class Parser:
     def parse_assignment(self):
         identifier = self.current_token()[1]
         self.eat('IDENTIFIER')
+
+        if self.current_token()[0] not in ['ASSIGN', 'PLUS_ASSIGN', 'MINUS_ASSIGN', 'TIMES_ASSIGN', 'DIVIDE_ASSIGN']:
+            self.add_error("Expected assignment operator")
 
         operator = None
         if self.current_token()[0] in {'PLUS_ASSIGN', 'MINUS_ASSIGN', 'TIMES_ASSIGN', 'DIVIDE_ASSIGN'}:
@@ -626,7 +649,7 @@ class Parser:
             return node
 
         else:
-            rself.add_error("Expected ELEMENT but found " + str(self.current_token()))
+            self.add_error("Expected ELEMENT but found " + str(self.current_token()))
 
     def peek_next_token(self):
         if self.pos + 1 < len(self.tokens):
