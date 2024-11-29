@@ -19,6 +19,15 @@ class ProgramNode:
             index += 1
         
         return "\n".join(output)
+    
+class Error:
+    def __init__(self, message, line_number):
+        self.message = message
+        self.line_number = line_number
+
+    def __str__(self):
+        return f"Line {self.line_number}: {self.message}"
+
 
 class FunctionDefNode:
     def __init__(self, name, parameters, body):
@@ -177,6 +186,21 @@ class Parser:
     def __init__(self, tokens):
         self.tokens = tokens
         self.pos = 0
+        self.errors = []
+        self.success = True
+
+    def add_error(self, message):
+        line_number = self.current_token()[2] if self.current_token() else "Unknown"
+        self.errors.append(Error(message, line_number))
+        self.success = False
+
+    def print_errors(self):
+        if self.errors:
+            print("Syntax Errors:")
+            for error in self.errors:
+                print(str(error))
+        else:
+            print("No syntax errors found.")
 
     def current_token(self):
         return self.tokens[self.pos] if self.pos < len(self.tokens) else None
@@ -191,9 +215,8 @@ class Parser:
             print(f"DEBUG: Consuming token: {self.current_token()}")
             self.pos += 1
         else:
-            raise SyntaxError(
-                f"Expected {token_type}, got {self.current_token()} at position {self.pos}"
-            )
+            self.add_error(f"Expected {token_type}, got {self.current_token()[0]}")
+
 
     def parse(self):
         self.skip_ignorable_tokens()
@@ -201,20 +224,16 @@ class Parser:
         statements = []
 
         while self.current_token() is not None:
-            print(f"DEBUG: Parsing function at token: {self.current_token()}")
-            print("hi")
             self.skip_ignorable_tokens()
-            print(self.current_token()[0])
-            if self.current_token()[0] == "DEF": 
+            if self.current_token()[0] == "DEF":
                 is_main = self.current_token()[1] == "main"
                 functions.append(self.parse_function_def(is_main))
             else:
                 statements.append(self.parse_statement())
-            
-        self.skip_ignorable_tokens()
-        print()
-        #print(f"DEBUG: Final AST: {functions}")
-        return ProgramNode(functions, statements)
+            self.skip_ignorable_tokens()
+
+        return ProgramNode(functions, statements), self.success
+
 
     def parse_function_def(self, main = False): # Add parameter to check if function is 'main' or not
         self.eat('DEF')
@@ -233,14 +252,14 @@ class Parser:
     def parse_function_call(self):
         token = self.current_token()
         if token[0] != 'IDENTIFIER':
-            raise SyntaxError(f"Expected function name, found {token}")
+            self.add_error(f"Expected function name, found {token}")
 
         function_name = token[1]  # Save the function name
         self.eat('IDENTIFIER')  # Consume the identifier
 
         # Ensure the next token is an opening parenthesis
         if self.current_token()[0] != 'LPAREN':
-            raise SyntaxError(f"Expected '(' after function name, found {self.current_token()}")
+            self.add_error(f"Expected '(' after function name, found {self.current_token()}")
 
         self.eat('LPAREN')  # Consume '('
         arguments = []
@@ -256,7 +275,7 @@ class Parser:
 
         # Ensure the closing parenthesis is present
         if self.current_token()[0] != 'RPAREN':
-            raise SyntaxError(f"Expected ')' after arguments, found {self.current_token()}")
+            self.add_error(f"Expected ')' after arguments, found {self.current_token()}")
 
         self.eat('RPAREN')  # Consume ')'
 
@@ -269,7 +288,7 @@ class Parser:
     def parse_return(self):
         # Ensure the current token is 'RETURN'
         if self.current_token()[0] != 'RETURN':
-            raise SyntaxError("Expected 'RETURN'")
+            self.add_error("Expected 'RETURN'")
 
         self.eat('RETURN')  # Consume the 'RETURN' token
 
@@ -301,7 +320,6 @@ class Parser:
         print(f"DEBUG: Parsed expression: {expression}")
         return expression
     
-        raise SyntaxError("Expected PARAMETER but found " + str(self.current_token()))
 
     def parse_block(self, in_function=False):
         statements = []
@@ -316,7 +334,7 @@ class Parser:
                 if in_function:
                     statements.append(self.parse_return())
                 else:
-                    raise SyntaxError("Return statement found outside of a function")
+                    self.add_error("Return statement found outside of a function")
 
             # Handle `ELIF` or `ELSE` tokens
             elif self.current_token() and self.current_token()[0] in ['ELIF', 'ELSE']:
@@ -355,7 +373,7 @@ class Parser:
         elif token_type == 'INDENT':
             self.eat('INDENT')
         else:
-            raise SyntaxError(f"Unexpected token: {token_type}")
+            self.add_error(f"Unexpected token: {token_type}")
         
         self.skip_ignorable_tokens()
 
@@ -379,7 +397,7 @@ class Parser:
 
     def parse_if(self):
         if self.current_token()[0] not in {'IF', 'ELIF', 'ELSE'}:
-            raise SyntaxError(f"Expected 'IF', 'ELIF', or 'ELSE' but found {self.current_token()}")
+            self.add_error(f"Expected 'IF', 'ELIF', or 'ELSE' but found {self.current_token()}")
         
         if self.current_token()[0] == 'IF':
             self.eat('IF')
@@ -390,7 +408,7 @@ class Parser:
         print(f"DEBUG: If/Elif condition: {condition}")
 
         if self.current_token()[0] != 'COLON':
-            raise SyntaxError("Expected ':' after if/elif condition")
+            self.add_error("Expected ':' after if/elif condition")
         self.eat('COLON')
 
         print("hi)")
@@ -408,7 +426,7 @@ class Parser:
                 print(f"DEBUG: Elif condition: {elif_condition}")
 
                 if self.current_token()[0] != 'COLON':
-                    raise SyntaxError("Expected ':' after elif condition")
+                    self.add_error("Expected ':' after elif condition")
                 self.eat('COLON')
 
                 elif_block = self.parse_block()
@@ -416,7 +434,7 @@ class Parser:
                 self.eat('ELSE')
 
                 if self.current_token()[0] != 'COLON':
-                    raise SyntaxError("Expected ':' after else")
+                    self.add_error("Expected ':' after else")
                 self.eat('COLON')
                 else_block = self.parse_block()
                 break 
@@ -482,7 +500,7 @@ class Parser:
             if self.current_token()[0] == 'COMMA': 
                 self.eat('COMMA')
             elif self.current_token()[0] != 'RBRACK':
-                raise SyntaxError(f"Unexpected token: {self.current_token()}")
+                self.add_error(f"Unexpected token: {self.current_token()}")
         
         self.eat('RBRACK')  
         
@@ -608,7 +626,7 @@ class Parser:
             return node
 
         else:
-            raise SyntaxError("Expected ELEMENT but found " + str(self.current_token()))
+            rself.add_error("Expected ELEMENT but found " + str(self.current_token()))
 
     def peek_next_token(self):
         if self.pos + 1 < len(self.tokens):

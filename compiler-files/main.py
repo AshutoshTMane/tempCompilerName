@@ -21,13 +21,18 @@ def main():
     parser = Parser(tokens)
     
     # Parse the tokens to create an AST
-    ast = parser.parse()
+    ast, success = parser.parse()
     print(ast)
+    #print (success)
+    print()
 
-    generator = CodeGenerator()
+    if success:
+        generator = CodeGenerator()
     
-    assembly_code = generator.generate_assembly(ast)
-    generator.print_assembly()
+        generator.generate_assembly(ast)
+        generator.print_assembly()
+    else:
+        parser.print_errors()
 
 if __name__ == "__main__":
     main()
