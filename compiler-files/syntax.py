@@ -214,6 +214,8 @@ class Parser:
         if self.current_token() and self.current_token()[0] == token_type:
             print(f"DEBUG: Consuming token: {self.current_token()}")
             self.pos += 1
+        elif self.current_token() is None:
+            self.add_error(f"Expected {token_type}, got {self.current_token()}")
         else:
             self.add_error(f"Expected {token_type}, got {self.current_token()[0]}")
 
@@ -342,7 +344,9 @@ class Parser:
         while self.current_token() and self.current_token()[0] != 'DEDENT':
             self.skip_ignorable_tokens()
 
-            if self.current_token() and self.current_token()[0] == 'RETURN':
+            if self.current_token() is None:
+                break
+            elif self.current_token() and self.current_token()[0] == 'RETURN':
                 if in_function:
                     statements.append(self.parse_return())
                 else:
@@ -356,9 +360,7 @@ class Parser:
                 print(f"DEBUG: Parsing statement at token: {self.current_token()}")
                 statements.append(self.parse_statement())
 
-        if self.current_token() is None:
-            self.add_error("Unexpected end of input in block")
-        else:
+        if self.current_token() is not None:
             self.eat('DEDENT')
             print("Ate Dedent")
 
