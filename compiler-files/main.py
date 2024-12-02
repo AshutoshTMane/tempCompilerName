@@ -31,6 +31,7 @@ def main():
     
         generator.generate_assembly(ast)
         generator.print_assembly()
+        exec(code)
     else:
         parser.print_errors()
 
