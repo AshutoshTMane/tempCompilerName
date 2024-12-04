@@ -37,11 +37,20 @@ class CodeGenerator:
             self.assembly_code.append("pop ebp")
             self.assembly_code.append("ret")
         elif isinstance(node, AssignmentNode):
-            reg = self.allocate()
-            self.generate_assembly(node.expression)
-            self.assembly_code.append(f"mov [{node.identifier.name}], {reg}")
-            self.deallocate(reg)
+            # Handle assignments like count = count + 1
+            if isinstance(node.expression, BinaryOpNode) and node.expression.operator == '+':
+                left_reg = self.generate_assembly(node.expression.left)
+                right_reg = self.generate_assembly(node.expression.right)
+                self.assembly_code.append(f"add {left_reg}, {right_reg}")
+                self.assembly_code.append(f"mov DWORD PTR [{node.identifier.name}], {left_reg}")
+                self.deallocate(left_reg)
+                self.deallocate(right_reg)
+            else:
+                reg = self.generate_assembly(node.expression)
+                self.assembly_code.append(f"mov DWORD PTR [{node.identifier.name}], {reg}")
+                self.deallocate(reg)
         elif isinstance(node, BinaryOpNode):
+            # Handle binary operations like x + 2
             left_reg = self.generate_assembly(node.left)
             right_reg = self.generate_assembly(node.right)
             if node.operator == '+':
@@ -51,9 +60,10 @@ class CodeGenerator:
             elif node.operator == '*':
                 self.assembly_code.append(f"imul {left_reg}, {right_reg}")
             elif node.operator == '/':
-                self.assembly_code.append(f"idiv {left_reg}, {right_reg}")
+                self.assembly_code.append("cdq")  # Sign-extend for division
+                self.assembly_code.append(f"idiv {right_reg}")
             self.deallocate(right_reg)
-            return left_reg  # Return the register so it can be deallocated by the caller
+            return left_reg
 
         elif isinstance(node, NumberNode):
             reg = self.allocate()
@@ -71,30 +81,60 @@ class CodeGenerator:
                 self.assembly_code.append("add esp, 4")
                 self.deallocate(reg)
         elif isinstance(node, IfNode):
-            condition_reg = self.generate_assembly(node.condition)
+            # If-elif-else handling
             else_label = self.generate_label()
+            elif_label = None
             end_label = self.generate_label()
-            self.assembly_code.append(f"cmp {condition_reg}, 0")
-            self.assembly_code.append(f"je {else_label}")
+
+            # If condition
+            condition_reg = self.generate_assembly(node.condition)
+            self.assembly_code.append(f"cmp DWORD PTR [{node.condition.left.name}], DWORD PTR [{node.condition.right.name}]")
+            self.assembly_code.append(f"jle {else_label}")  # Jump to elif/else if x <= y
             for statement in node.block:
                 self.generate_assembly(statement)
-            self.assembly_code.append(f"jmp {end_label}")
+            self.assembly_code.append(f"jmp {end_label}")  # Skip elif/else
+
+            # Elif condition
+            if node.elif_condition:
+                elif_label = self.generate_label()
+                self.assembly_code.append(f"{elif_label}:")
+                self.assembly_code.append(f"cmp DWORD PTR [{node.elif_condition.left.name}], DWORD PTR [{node.elif_condition.right.name}]")
+                self.assembly_code.append(f"jne {else_label}")  # Jump to else if x != y
+                for statement in node.elif_block:
+                    self.generate_assembly(statement)
+                self.assembly_code.append(f"jmp {end_label}")
+
+            # Else block
             self.assembly_code.append(f"{else_label}:")
             if node.else_block:
                 for statement in node.else_block:
                     self.generate_assembly(statement)
+
+            # End of if-elif-else
             self.assembly_code.append(f"{end_label}:")
             self.deallocate(condition_reg)
         elif isinstance(node, WhileNode):
             start_label = self.generate_label()
             end_label = self.generate_label()
+
+            # Start of the loop
             self.assembly_code.append(f"{start_label}:")
-            condition_reg = self.generate_assembly(node.condition)
-            self.assembly_code.append(f"cmp {condition_reg}, 0")
-            self.assembly_code.append(f"je {end_label}")
+
+            # Evaluate the loop condition
+            condition_reg = self.generate_assembly(node.condition.left)
+            compare_value = self.generate_assembly(node.condition.right)
+            self.assembly_code.append(f"cmp {condition_reg}, {compare_value}")
+            self.assembly_code.append(f"jge {end_label}")  # Exit loop if count >= 3
+            self.deallocate(compare_value)
+
+            # Loop body
             for statement in node.block:
                 self.generate_assembly(statement)
+
+            # Jump back to the start of the loop
             self.assembly_code.append(f"jmp {start_label}")
+
+            # End of loop
             self.assembly_code.append(f"{end_label}:")
             self.deallocate(condition_reg)
         elif isinstance(node, ForNode):
